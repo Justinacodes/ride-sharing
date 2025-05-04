@@ -1,3 +1,4 @@
+import BottomNav from '@/components/BottomNav'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -16,7 +17,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+        <body className="relative pb-16"> 
+        {children}
+        <BottomNav />
+        </body>
+ 
     </html>
   )
 }
