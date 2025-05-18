@@ -1,36 +1,33 @@
-"use client"
-import { useUserStore } from '@/stores/userStore';
-import React from 'react'
-import { account } from '../appwrite';
+"use client";
 
-const logout = () => {
-    const { user, setUser, clearUser } = useUserStore();
-    const logout = async () => {
-        try {
-          await account.deleteSession("current");
-          clearUser();
-        } catch (error) {
-          console.error("Logout failed:", error);
-        }
-      };
+import { useRouter } from "next/navigation";
+import { account } from "../appwrite";
+import { useUserStore } from "@/stores/userStore";
 
-    
-  if (user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-        <p className="mb-4 text-lg">Logged in as <strong>{user.name}</strong></p>
-        <button
-          type="button"
-          onClick={logout}
-          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-        >
-          Logout
-        </button>
-        
-      </div>
-    );
-  }
+const LogoutButton = () => {
+  const router = useRouter();
+  const { clearUser } = useUserStore();
 
-}
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession("current");
+      clearUser();
+      router.push("/login"); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
-export default logout
+  return (
+    <button
+      onClick={handleLogout}
+      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+    >
+      Logout
+    </button>
+  );
+};
+
+export default LogoutButton;
+
+

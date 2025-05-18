@@ -39,21 +39,31 @@ const savedLocations = [
   "Riverside Yacht Haven",
 ];
 
+
 export default function ActivityPage() {
   const [editMode, setEditMode] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
 
+  const toggleCheckbox = (idx: number) => {
+    setSelected((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+    );
+  };
+  
   return (
     <div className="min-h-screen bg-white p-4 text-gray-900">
       <header className="mb-4 flex justify-between items-center">
         <div>
           <h1 className="text-xl font-bold">Your Activity</h1>
         </div>
-        <button
+        {/* <button
           className="text-purple-600 text-sm"
           onClick={() => setEditMode((prev) => !prev)}
         >
           {editMode ? "Done" : "Edit"}
-        </button>
+        </button> */}
+{/*         
+          {!editMode && <button className="text-purple-600 text-sm">Edit</button>} */}
       </header>
 
       {/* History Rides */}
@@ -83,46 +93,66 @@ export default function ActivityPage() {
 
       {/* Saved Locations */}
       <section>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-sm font-semibold">Location Saved</h2>
-          {!editMode && <button className="text-purple-600 text-sm">Edit</button>}
-        </div>
-        <div className="space-y-3">
-          {savedLocations.map((loc, idx) => (
-            <div
-              key={idx}
-              className="flex justify-between items-center p-3 border rounded-md"
-            >
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-sm font-semibold">Location Saved</h2>
+        <button
+          className="text-purple-600 text-sm"
+          onClick={() => {
+            setEditMode((prev) => !prev);
+            setSelected([]); // reset selection when toggling mode
+          }}
+        >
+          {editMode ? "Done" : "Edit"}
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {savedLocations.map((loc, idx) => (
+          <div
+            key={idx}
+            className="flex justify-between items-center p-3 border rounded-md"
+          >
+            <div className="flex items-center gap-3">
+              {editMode && (
+                <input
+                  type="checkbox"
+                  checked={selected.includes(idx)}
+                  onChange={() => toggleCheckbox(idx)}
+                  className="accent-purple-600"
+                />
+              )}
               <div>
                 <p className="font-semibold text-sm">{loc}</p>
                 <p className="text-xs text-gray-500">
                   123 Marina Avenue, Washington, D.C. 20003
                 </p>
               </div>
-              {editMode ? (
-                <div className="flex gap-2">
-                  <button className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-md">
-                    Update
-                  </button>
-                  <button className="text-xs bg-red-500 text-white p-1 rounded-md">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ) : (
-                <button className="text-xs bg-purple-600 text-white px-4 py-1 rounded-md">
-                  Order
-                </button>
-              )}
             </div>
-          ))}
-          {editMode && (
-            <button className="w-full mt-4 bg-red-600 text-white py-2 rounded-md text-sm font-semibold">
-              Delete Location
-            </button>
-          )}
-        </div>
-      </section>
-  
+
+            {editMode ? (
+              <div className="flex gap-2">
+                <button className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-md">
+                  Update
+                </button>
+                <button className="text-xs bg-red-500 text-white p-1 rounded-md">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ) : (
+              <button className="text-xs bg-purple-600 text-white px-4 py-1 rounded-md">
+                Order
+              </button>
+            )}
+          </div>
+        ))}
+
+        {editMode && selected.length > 0 && (
+          <button className="w-full mt-4 bg-red-600 text-white py-2 rounded-md text-sm font-semibold">
+            Delete Selected ({selected.length})
+          </button>
+        )}
+      </div>
+    </section>
     </div>
   );
 }

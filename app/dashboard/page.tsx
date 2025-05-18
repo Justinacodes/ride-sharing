@@ -6,12 +6,20 @@ import { Modal } from "@/components/Modal";
 import { OrderForm } from "@/components/OrderForm";
 import { useUserStore } from "@/stores/userStore";
 import { account } from "../appwrite";
+import LogoutButton from "../logout/page";
+import Map from "@/components/Maps";
+import dynamic from "next/dynamic";
 
 
 export default function HomeScreen() {
   const [location, setLocation] = useState("");
   const [showOrderModal, setShowOrderModal] = useState(false);
   const { user, setUser } = useUserStore();
+  const Map = dynamic(() => import('../../components/Maps'), { ssr: false });
+
+
+
+
   // const showActivity = () => {
   //   router.push("/activity")
   // }
@@ -39,7 +47,8 @@ export default function HomeScreen() {
           Hi {user?.name || "there"},
         </h2>
         <p className="text-sm text-gray-500">Welcome Back</p>
-
+        <LogoutButton />
+        <Map />
         {/* Wallet Card
         <div className="mt-4 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl p-4">
           <div className="flex justify-between items-center">

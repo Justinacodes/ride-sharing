@@ -14,7 +14,7 @@ const RegisterPage = () => {
   const login = async (email: string, password: string) => {
     try {
       const session = await account.createEmailPasswordSession(email, password);
-      const user = await account.get();
+      const user = await account.create(email, password, name);
       setLoggedInUser(user);
     } catch (err) {
       console.error(err);

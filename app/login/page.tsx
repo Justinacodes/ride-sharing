@@ -32,6 +32,12 @@ const LoginPage = () => {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
+      try {
+        await account.deleteSession('current');
+      } catch (e) {
+        console.log("No existing session to delete");
+      }
+  
       await account.createEmailPasswordSession(email, password);
       const user = await account.get();
       setUser(user);
@@ -43,7 +49,7 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
-
+  
   // const logout = async () => {
   //   try {
   //     await account.deleteSession("current");

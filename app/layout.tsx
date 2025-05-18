@@ -19,7 +19,7 @@ export default function RootLayout({
     <html lang="en">
         <body className="relative pb-16"> 
         {children}
-        <BottomNav />
+       
         </body>
  
     </html>

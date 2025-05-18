@@ -11,14 +11,14 @@ const BottomNav = () => {
   return (
     <div className="fixed bottom-0 w-full bg-white border-t border-gray-200">
       <div className="grid grid-cols-4 text-center text-xs">
-        <Link href="/homepage" className="flex flex-col items-center py-2" passHref>
+        <Link href="/dashboard" className="flex flex-col items-center py-2" passHref>
           <div className={isActive("/homepage") ? "text-purple-600" : "text-gray-600"}>
             <Home size={20} />
             <span>Home</span>
           </div>
         </Link>
-        <Link href="/activity" className="flex flex-col items-center py-2" passHref>
-          <div className={isActive("/activity") ? "text-purple-600" : "text-gray-600"}>
+        <Link href="/dashboard/activity" className="flex flex-col items-center py-2" passHref>
+          <div className={isActive("/dashboard/activity") ? "text-purple-600" : "text-gray-600"}>
             <Activity size={20} />
             <span>Activity</span>
           </div>
