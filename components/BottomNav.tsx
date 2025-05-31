@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, CreditCard, User } from "lucide-react";
+import { Home, Activity, CreditCard, User, MessageCircle } from "lucide-react";
 
 const BottomNav = () => {
   const pathname = usePathname();
@@ -10,7 +10,7 @@ const BottomNav = () => {
 
   return (
     <div className="fixed bottom-0 w-full bg-white border-t border-gray-200">
-      <div className="grid grid-cols-4 text-center text-xs">
+      <div className="grid grid-cols-5 text-center text-xs">
         <Link href="/dashboard" className="flex flex-col items-center py-2" passHref>
           <div className={isActive("/homepage") ? "text-purple-600" : "text-gray-600"}>
             <Home size={20} />
@@ -23,13 +23,19 @@ const BottomNav = () => {
             <span>Activity</span>
           </div>
         </Link>
-        <Link href="/payment" className="flex flex-col items-center py-2" passHref>
+        <Link href="/dashboard/payment" className="flex flex-col items-center py-2" passHref>
           <div className={isActive("/payment") ? "text-purple-600" : "text-gray-600"}>
             <CreditCard size={20} />
             <span>Payment</span>
           </div>
         </Link>
-        <Link href="/account" className="flex flex-col items-center py-2" passHref>
+        <Link href="/dashboard/messages" className="flex flex-col items-center py-2" passHref>
+          <div className={isActive("/messages") ? "text-purple-600" : "text-gray-600"}>
+            <MessageCircle size={20} />
+            <span>Messages</span>
+          </div>
+        </Link>
+        <Link href="/dashboard/account" className="flex flex-col items-center py-2" passHref>
           <div className={isActive("/account") ? "text-purple-600" : "text-gray-600"}>
             <User size={20} />
             <span>Account</span>

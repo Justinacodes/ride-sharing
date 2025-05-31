@@ -89,7 +89,7 @@ export function OrderForm({ onClose }: { onClose: () => void }) {
               <Search className="text-purple-600 w-5 h-5" />
               <div>
                 <p className="font-semibold text-sm">{location || 'Searching...'}</p>
-                <p className="text-xs text-gray-500">Washington, DC</p>
+                <p className="text-xs text-gray-500">Lagos, Nigeria</p>
               </div>
             </div>
           </Card>

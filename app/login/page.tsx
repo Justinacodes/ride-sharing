@@ -41,7 +41,7 @@ const LoginPage = () => {
       await account.createEmailPasswordSession(email, password);
       const user = await account.get();
       setUser(user);
-      router.push("/homepage");
+      router.push("/dashboard");
     } catch (err) {
       alert("Login failed. Please check your credentials.");
       console.error(err);

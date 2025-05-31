@@ -1,30 +1,51 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Home, Activity, CreditCard, User, Search, MapPin } from "lucide-react";
+import { Search, MapPin } from "lucide-react";
 import { Modal } from "@/components/Modal";
-import { OrderForm } from "@/components/OrderForm";
 import { useUserStore } from "@/stores/userStore";
 import { account } from "../appwrite";
 import LogoutButton from "../logout/page";
-import Map from "@/components/Maps";
 import dynamic from "next/dynamic";
+import SearchOrderScreen from "@/components/SearchOrderScreen";
 
+const Map = dynamic(() => import("../../components/Maps"), { ssr: false });
+
+// function SearchOrderScreen({ onClose }: { onClose: () => void }) {
+//   const [showMap, setShowMap] = useState(false);
+
+//   return (
+//     <div className="h-full space-y-4">
+//       <div className="flex justify-between items-center">
+//         <h2 className="text-lg font-semibold">Search Ride Location</h2>
+//         <button onClick={onClose} className="text-sm text-purple-600">Close</button>
+//       </div>
+
+//       <div className="relative">
+//         <input
+//           type="text"
+//           placeholder="Tap to search on map"
+//           readOnly
+//           onClick={() => setShowMap(true)}
+//           className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+//         />
+//         <Search className="absolute right-3 top-2.5 text-gray-400" size={16} />
+//       </div>
+
+//       {showMap && (
+//         <div className="h-[400px] w-full">
+//           <Map />
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
 
 export default function HomeScreen() {
   const [location, setLocation] = useState("");
   const [showOrderModal, setShowOrderModal] = useState(false);
   const { user, setUser } = useUserStore();
-  const Map = dynamic(() => import('../../components/Maps'), { ssr: false });
 
-
-
-
-  // const showActivity = () => {
-  //   router.push("/activity")
-  // }
-
-  
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -43,24 +64,13 @@ export default function HomeScreen() {
     <div className="bg-white min-h-screen text-gray-900 pb-24">
       <div className="p-4">
         {/* Header */}
-        <h2 className="text-xl font-bold">
-          Hi {user?.name || "there"},
-        </h2>
-        <p className="text-sm text-gray-500">Welcome Back</p>
-        <LogoutButton />
-        <Map />
-        {/* Wallet Card
-        <div className="mt-4 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm">Your Balance</p>
-              <h3 className="text-2xl font-bold">₦54,000</h3>
-            </div>
-            <button className="bg-white text-purple-700 font-semibold px-4 py-1 rounded-md">Deposit</button>
+        <div className="flex justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Hi {user?.name || "there"},</h2>
+            <p className="text-sm text-gray-500">Welcome Back</p>
           </div>
-          <p className="mt-2 text-xs">Rideshare Wallet</p>
-          <p className="text-xs">Your Points: <strong>3782</strong></p>
-        </div> */}
+          <LogoutButton />
+        </div>
 
         {/* Location Info */}
         <div className="mt-6">
@@ -69,7 +79,7 @@ export default function HomeScreen() {
             <MapPin size={16} /> Lagos, Nigeria
           </div>
 
-          {/* Order trigger input */}
+          {/* Search trigger */}
           <p className="mt-4 text-sm font-semibold">Search Location</p>
           <div className="relative mt-1">
             <input
@@ -105,7 +115,7 @@ export default function HomeScreen() {
           <div className="space-y-2">
             {[
               { name: "Elizade University", address: "Ilara-Mokin, Ondo State, Nigeria" },
-              { name: "FUTA", address: "Akure, Ondo Stae, Nigeria" },
+              { name: "FUTA", address: "Akure, Ondo State, Nigeria" },
               { name: "Unilag", address: "Lagos, Nigeria" },
             ].map(({ name, address }) => (
               <div key={name} className="p-3 border rounded-md flex justify-between items-center">
@@ -120,40 +130,9 @@ export default function HomeScreen() {
         </div>
       </div>
 
-      {/* Bottom Nav */}
-      {/* <div className="fixed bottom-0 w-full bg-white border-t border-gray-200">
-      <div className="grid grid-cols-4 text-center text-xs">
-        <Link href="/" className="flex flex-col items-center py-2" passHref>
-          <div className={isActive("/") ? "text-purple-600" : "text-gray-600"}>
-            <Home size={20} />
-            <span>Home</span>
-          </div>
-        </Link>
-        <Link href="/activity" className="flex flex-col items-center py-2" passHref>
-          <div className={isActive("/activity") ? "text-purple-600" : "text-gray-600"}>
-            <Activity size={20} />
-            <span>Activity</span>
-          </div>
-        </Link>
-        <Link href="/payment" className="flex flex-col items-center py-2" passHref>
-          <div className={isActive("/payment") ? "text-purple-600" : "text-gray-600"}>
-            <CreditCard size={20} />
-            <span>Payment</span>
-          </div>
-        </Link>
-        <Link href="/account" className="flex flex-col items-center py-2" passHref>
-          <div className={isActive("/account") ? "text-purple-600" : "text-gray-600"}>
-            <User size={20} />
-            <span>Account</span>
-          </div>
-        </Link>
-      </div>
-    </div> */}
-
-
-      {/* Order Modal */}
-      <Modal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)}>
-        <OrderForm onClose={() => setShowOrderModal(false)} />
+      {/* Fullscreen & Scrollable Modal */}
+      <Modal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} fullScreen scrollable>
+        <SearchOrderScreen onClose={() => setShowOrderModal(false)} />
       </Modal>
     </div>
   );
