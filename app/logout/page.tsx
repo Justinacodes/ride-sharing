@@ -14,6 +14,7 @@ const LogoutButton = () => {
       clearUser();
       router.push("/login"); 
     } catch (error) {
+      router.push("/login");
       console.error("Logout failed:", error);
     }
   };
@@ -21,7 +22,7 @@ const LogoutButton = () => {
   return (
     <button
       onClick={handleLogout}
-      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+      className="p-5 bg-red-500 text-white rounded-lg hover:bg-red-600"
     >
       Logout
     </button>

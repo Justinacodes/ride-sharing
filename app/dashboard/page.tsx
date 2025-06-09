@@ -8,42 +8,14 @@ import { account } from "../appwrite";
 import LogoutButton from "../logout/page";
 import dynamic from "next/dynamic";
 import SearchOrderScreen from "@/components/SearchOrderScreen";
+import DriverRouteModal from "@/components/DriverRouteModal";
 
 const Map = dynamic(() => import("../../components/Maps"), { ssr: false });
-
-// function SearchOrderScreen({ onClose }: { onClose: () => void }) {
-//   const [showMap, setShowMap] = useState(false);
-
-//   return (
-//     <div className="h-full space-y-4">
-//       <div className="flex justify-between items-center">
-//         <h2 className="text-lg font-semibold">Search Ride Location</h2>
-//         <button onClick={onClose} className="text-sm text-purple-600">Close</button>
-//       </div>
-
-//       <div className="relative">
-//         <input
-//           type="text"
-//           placeholder="Tap to search on map"
-//           readOnly
-//           onClick={() => setShowMap(true)}
-//           className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-//         />
-//         <Search className="absolute right-3 top-2.5 text-gray-400" size={16} />
-//       </div>
-
-//       {showMap && (
-//         <div className="h-[400px] w-full">
-//           <Map />
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
 
 export default function HomeScreen() {
   const [location, setLocation] = useState("");
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showDriverModal, setShowDriverModal] = useState(false);
   const { user, setUser } = useUserStore();
 
   useEffect(() => {
@@ -69,7 +41,18 @@ export default function HomeScreen() {
             <h2 className="text-xl font-bold">Hi {user?.name || "there"},</h2>
             <p className="text-sm text-gray-500">Welcome Back</p>
           </div>
-          <LogoutButton />
+          <div className="flex">  {/* Offer a Ride Button */}
+        <div className="mt-8">
+          <button
+            onClick={() => setShowDriverModal(true)}
+            className="w-full bg-purple-600 text-white py-3 rounded-md font-semibold"
+          >
+            Offer a Ride
+          </button>
+        </div>
+        <LogoutButton />
+        </div>
+          
         </div>
 
         {/* Location Info */}
@@ -128,12 +111,16 @@ export default function HomeScreen() {
             ))}
           </div>
         </div>
+
+      
       </div>
 
-      {/* Fullscreen & Scrollable Modal */}
+      {/* Modals */}
       <Modal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} fullScreen scrollable>
         <SearchOrderScreen onClose={() => setShowOrderModal(false)} />
       </Modal>
+
+      <DriverRouteModal isOpen={showDriverModal} onClose={() => setShowDriverModal(false)} />
     </div>
   );
 }
