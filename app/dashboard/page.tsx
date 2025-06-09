@@ -7,7 +7,7 @@ import { useUserStore } from "@/stores/userStore";
 import { account } from "../appwrite";
 import LogoutButton from "../logout/page";
 import dynamic from "next/dynamic";
-import SearchOrderScreen from "@/components/SearchOrderScreen";
+//import SearchOrderScreen from "@/components/SearchOrderScreen";
 import DriverRouteModal from "@/components/DriverRouteModal";
 
 const Map = dynamic(() => import("../../components/Maps"), { ssr: false });
@@ -116,9 +116,9 @@ export default function HomeScreen() {
       </div>
 
       {/* Modals */}
-      <Modal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} fullScreen scrollable>
+      {/* <Modal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} fullScreen scrollable>
         <SearchOrderScreen onClose={() => setShowOrderModal(false)} />
-      </Modal>
+      </Modal> */}
 
       <DriverRouteModal isOpen={showDriverModal} onClose={() => setShowDriverModal(false)} />
     </div>
