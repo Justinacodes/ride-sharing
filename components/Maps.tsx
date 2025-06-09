@@ -1,3 +1,4 @@
+'use client'
 import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api';
 import { useEffect, useMemo, useState } from 'react';
 
