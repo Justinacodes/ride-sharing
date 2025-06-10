@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import LoginPage from './login/page'
 
 export default function Home() {
   return (
@@ -6,6 +7,7 @@ export default function Home() {
 
 
       <div>
+        <LoginPage />
       </div>
     </main>
   )
