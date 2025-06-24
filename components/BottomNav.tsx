@@ -23,10 +23,10 @@ const BottomNav = () => {
             <span>Activity</span>
           </div>
         </Link>
-        <Link href="/dashboard/payment" className="flex flex-col items-center py-2" passHref>
+        <Link href="/dashboard/available-rides" className="flex flex-col items-center py-2" passHref>
           <div className={isActive("/payment") ? "text-purple-600" : "text-gray-600"}>
             <CreditCard size={20} />
-            <span>Payment</span>
+            <span>Available Rides</span>
           </div>
         </Link>
         <Link href="/dashboard/messages" className="flex flex-col items-center py-2" passHref>
