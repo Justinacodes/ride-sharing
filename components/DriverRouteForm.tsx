@@ -12,8 +12,8 @@ interface RouteFormData {
   to: string;
   date: string;
   time: string;
-  noOfSeats: string;
-  availableSeats: string;
+  noOfSeats: number;
+  availableSeats: number;
   price?: string;
   description?: string;
   carModel?: string;
@@ -35,11 +35,13 @@ export default function DriverRouteForm({
     to: "",
     date: "",
     time: "",
-    noOfSeats: "",
-    availableSeats: "",
+    noOfSeats: 0,
+    availableSeats: 0,
     price: "",
     description: "",
     carModel: "",
+    fromCoordinates: { lat: 0, lng: 0 },
+    toCoordinates: { lat: 0, lng: 0 },
   });
   const [error, setError] = useState("");
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -48,12 +50,26 @@ export default function DriverRouteForm({
   const toAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Auto-set available seats when total seats change
-    if (field === 'noOfSeats' && value) {
-      setFormData(prev => ({ ...prev, availableSeats: value }));
-    }
+    setFormData(prev => {
+      if (field === 'noOfSeats') {
+        const numValue = parseInt(value) || 0;
+        return {
+          ...prev,
+          noOfSeats: numValue,
+          availableSeats: value ? numValue : prev.availableSeats
+        };
+      } else if (field === 'availableSeats') {
+        return {
+          ...prev,
+          availableSeats: parseInt(value) || 0
+        };
+      } else {
+        return {
+          ...prev,
+          [field]: value
+        };
+      }
+    });
   };
 
   const handlePlaceChange = (
@@ -104,13 +120,13 @@ export default function DriverRouteForm({
     if (!formData.date || !formData.time) {
       return "Please select date and time";
     }
-    if (!formData.noOfSeats || parseInt(formData.noOfSeats) < 1) {
+    if (!formData.noOfSeats || formData.noOfSeats < 1) {
       return "Please enter valid number of seats";
     }
-    if (!formData.availableSeats || parseInt(formData.availableSeats) < 1) {
+    if (!formData.availableSeats || formData.availableSeats < 1) {
       return "Please enter valid number of available seats";
     }
-    if (parseInt(formData.availableSeats) > parseInt(formData.noOfSeats)) {
+    if (formData.availableSeats > formData.noOfSeats) {
       return "Available seats cannot be more than total seats";
     }
     if (formData.price && parseFloat(formData.price) < 0) {
@@ -152,14 +168,14 @@ export default function DriverRouteForm({
         return;
       }
 
-      // Prepare final data
+      // Prepare final data - ensure numeric fields are integers
       const submitData: RouteFormData = {
         from: formData.from,
         to: formData.to,
         date: formData.date,
         time: formData.time,
-        noOfSeats: formData.noOfSeats,
-        availableSeats: formData.availableSeats,
+        noOfSeats: Number(formData.noOfSeats),
+        availableSeats: Number(formData.availableSeats),
         fromCoordinates,
         toCoordinates,
         ...(formData.price && { price: formData.price }),
@@ -322,7 +338,7 @@ export default function DriverRouteForm({
                   </label>
                   <input
                     type="number"
-                    value={formData.noOfSeats}
+                    value={formData.noOfSeats || ''}
                     onChange={(e) => handleInputChange('noOfSeats', e.target.value)}
                     min="1"
                     max="8"
@@ -338,10 +354,10 @@ export default function DriverRouteForm({
                   </label>
                   <input
                     type="number"
-                    value={formData.availableSeats}
+                    value={formData.availableSeats || ''}
                     onChange={(e) => handleInputChange('availableSeats', e.target.value)}
                     min="1"
-                    max={formData.noOfSeats || "8"}
+                    max={formData.noOfSeats || 8}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Available seats"
                     required
@@ -412,9 +428,9 @@ export default function DriverRouteForm({
             disabled={isSubmitting}
             onClick={(e) => {
               // Find the form element and trigger submit
-              const form = e.currentTarget.closest('.flex.flex-col')?.querySelector('form') as HTMLFormElement;
-              if (form) {
-                form.requestSubmit();
+              const formElement = document.querySelector('form');
+              if (formElement) {
+                formElement.requestSubmit();
               }
             }}
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"

@@ -5,11 +5,11 @@ import { toast } from "sonner";
 import { databases, Query } from "@/app/appwrite";
 import { useUserStore } from "@/stores/userStore";
 import { Models } from "appwrite";
-import { 
-  Car, 
-  MapPin, 
-  Clock, 
-  User, 
+import {
+  Car,
+  MapPin,
+  Clock,
+  User,
   Calendar,
   Navigation,
   DollarSign,
@@ -18,21 +18,26 @@ import {
   Filter,
   RefreshCw
 } from "lucide-react";
+import { RideRequestService } from "@/app/utils/rideRequests"; // Import the service directly
 
 interface Ride extends Models.Document {
   driverId: string;
-  driverName: string;
+  driverName?: string;
   from: string;
   to: string;
   date: string;
   time: string;
   availableSeats: number;
   price?: number;
-  communityId: string;
-  status: 'active' | 'full' | 'completed' | 'cancelled';
+  communityId?: string;
+  status: 'active' | 'full' | 'completed' | 'cancelled' | 'unknown';
   description?: string;
   carModel?: string;
   rating?: number;
+  noOfSeats: number;
+  fromArea?: string;
+  toArea?: string;
+  createdAt?: string;
 }
 
 interface AvailableRidesSectionProps {
@@ -41,98 +46,298 @@ interface AvailableRidesSectionProps {
   onRequestRide?: (rideId: string) => void;
 }
 
-export default function AvailableRidesSection({ 
-  joinedCommunities, 
+export default function AvailableRidesSection({
+  joinedCommunities,
   disabled = false,
-  onRequestRide 
+  onRequestRide
 }: AvailableRidesSectionProps) {
   const { user } = useUserStore();
+
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'today' | 'tomorrow'>('all');
   const [refreshing, setRefreshing] = useState(false);
 
+  // Environment variables for Appwrite
   const DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DB_ID!;
-  const RIDES_ID = process.env.NEXT_PUBLIC_RIDES_ID!; // You'll need to add this collection
+  const RIDES_ID = process.env.NEXT_PUBLIC_APPWRITE_RIDES_COLLECTION_ID!;
 
   const fetchAvailableRides = useCallback(async () => {
-    if (disabled || joinedCommunities.length === 0) {
+    if (disabled) {
+      setLoading(false);
+      return;
+    }
+
+    if (!DB_ID || !RIDES_ID) {
+      console.error("Missing database configuration:", { DB_ID, RIDES_ID });
+      toast.error("Database configuration error. Please check environment variables.");
       setLoading(false);
       return;
     }
 
     try {
       setRefreshing(true);
-      
-      // Build queries for each joined community
-      const queries = [
-        Query.equal("status", "active"),
-        Query.greaterThan("availableSeats", 0),
-        Query.notEqual("driverId", user?.$id || ""), // Don't show user's own rides
-      ];
 
-      // Add community filter
-      if (joinedCommunities.length > 0) {
-        queries.push(Query.contains("communityId", joinedCommunities));
+      let queries: string[] = [];
+
+      if (user?.$id) {
+        queries.push(Query.notEqual("driverId", user.$id));
       }
 
-      // Add date filter
       const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
-      if (filter === 'today') {
-        queries.push(Query.equal("date", today));
-      } else if (filter === 'tomorrow') {
-        queries.push(Query.equal("date", tomorrow));
-      } else {
-        // For 'all', get rides from today onwards
-        queries.push(Query.greaterThanEqual("date", today));
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      switch (filter) {
+        case 'today':
+          queries.push(Query.equal("date", today));
+          break;
+        case 'tomorrow':
+          queries.push(Query.equal("date", tomorrowStr));
+          break;
+        case 'all':
+        default:
+          queries.push(Query.greaterThanEqual("date", today));
+          break;
       }
 
-      const response = await databases.listDocuments(
+      console.log("Fetching rides with queries:", queries);
+      console.log("Database ID:", DB_ID);
+      console.log("Collection ID:", RIDES_ID);
+
+      const result = await databases.listDocuments(
         DB_ID,
         RIDES_ID,
         queries
       );
 
-      setRides(response.documents as Ride[]);
+      console.log("Raw result from Appwrite:", result);
+
+      if (!result) {
+        console.error("No result returned from Appwrite");
+        toast.error("Failed to fetch rides: No response from database");
+        setRides([]);
+        return;
+      }
+
+      if (!result.documents) {
+        console.error("Result does not contain documents property:", result);
+        toast.error("Failed to fetch rides: Invalid response format");
+        setRides([]);
+        return;
+      }
+
+      if (!Array.isArray(result.documents)) {
+        console.error("Documents is not an array:", typeof result.documents, result.documents);
+        toast.error("Failed to fetch rides: Invalid documents format");
+        setRides([]);
+        return;
+      }
+
+      console.log(`Found ${result.documents.length} documents from database`);
+
+      const isValidRide = (doc: any): doc is Ride => {
+        const hasRequiredFields = doc &&
+               typeof doc.$id === 'string' &&
+               typeof doc.driverId === 'string' &&
+               typeof doc.from === 'string' &&
+               typeof doc.to === 'string' &&
+               typeof doc.date === 'string' &&
+               typeof doc.time === 'string';
+
+        if (!hasRequiredFields) {
+          console.warn("Invalid ride document - missing required fields:", doc);
+          return false;
+        }
+
+        return true;
+      };
+
+      const validRides: Ride[] = result.documents
+        .filter(isValidRide)
+        .map(doc => ({
+          ...doc,
+          driverId: doc.driverId,
+          driverName: doc.driverName || 'Unknown Driver',
+          from: doc.from,
+          to: doc.to,
+          date: doc.date,
+          time: doc.time,
+          availableSeats: doc.availableSeats === null || doc.availableSeats === undefined ?
+            (doc.noOfSeats ? Number(doc.noOfSeats) : 1) : Number(doc.availableSeats),
+          noOfSeats: doc.noOfSeats === null || doc.noOfSeats === undefined ? 1 : Number(doc.noOfSeats),
+          price: doc.price ? Number(doc.price) : undefined,
+          communityId: doc.communityId,
+          status: doc.status === null || doc.status === undefined ? 'active' : doc.status as 'active' | 'full' | 'completed' | 'cancelled' | 'unknown',
+          description: doc.description,
+          carModel: doc.carModel,
+          rating: doc.rating ? Number(doc.rating) : undefined,
+          fromArea: doc.fromArea,
+          toArea: doc.toArea,
+          createdAt: doc.createdAt,
+        }));
+
+      console.log(`Found ${validRides.length} valid rides from ${result.documents.length} total documents`);
+      console.log("Valid rides:", validRides);
+
+      if (validRides.length === 0) {
+        const filterText = filter === 'all' ? '' : ` for ${filter}`;
+        toast.info(`No rides available${filterText}.`);
+      } else {
+        toast.success(`Found ${validRides.length} available ride${validRides.length > 1 ? 's' : ''}!`);
+      }
+
+      setRides(validRides);
+
     } catch (error) {
       console.error("Error fetching rides:", error);
-      toast.error("Failed to load available rides");
+
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+
+        if (error.message.includes('Collection with the requested ID could not be found')) {
+          toast.error("Database collection not found. Please check your collection ID.");
+        } else if (error.message.includes('Database with the requested ID could not be found')) {
+          toast.error("Database not found. Please check your database ID.");
+        } else if (error.message.includes('Unauthorized')) {
+          toast.error("Unauthorized access. Please check your permissions.");
+        } else {
+          toast.error(`Failed to load rides: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to load available rides. Please check your connection and try again.");
+      }
+
+      setRides([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [DB_ID, RIDES_ID, disabled, joinedCommunities, user?.$id, filter]);
+  }, [disabled, user?.$id, filter, DB_ID, RIDES_ID]);
 
-  const handleRequestRide = async (rideId: string) => {
-    if (!user?.$id) {
-      toast.warning("Please log in to request a ride");
-      return;
-    }
+// Replace the problematic section around line 226 with this:
 
-    setRequesting(rideId);
+const handleRequestRide = async (ride: Ride) => {
+  console.log("handleRequestRide called for ride:", ride.$id);
+  console.log("User data:", user);
+
+  // Check user data - using correct Appwrite User properties
+  const userId = user?.$id;
+  const userName = user?.name;
+  const userPhone = user?.phone;
+  const userEmail = user?.email;
+
+  // Log the actual user object to debug
+  console.log("Full user object:", user);
+  console.log("User properties:", {
+    $id: user?.$id,
+    name: user?.name,
+    phone: user?.phone,
+    email: user?.email,
+    prefs: user?.prefs
+  });
+
+  if (!userId || !userName || !userEmail) {
+    console.error("Missing user data:", { 
+      userId, 
+      userName, 
+      userPhone, 
+      userEmail 
+    });
+    toast.warning("Please log in and ensure your profile has a name and email to request a ride.");
+    return;
+  }
+
+  // Check if user phone is empty string or missing (which is your current issue)
+  // Phone might be stored in user preferences
+  const phoneFromPrefs = user?.prefs?.phone || user?.prefs?.userPhone;
+  const finalPhone = userPhone || phoneFromPrefs;
+  
+  if (!finalPhone || finalPhone.trim() === '') {
+    toast.warning("Please add your phone number to your profile to request rides.");
+    return;
+  }
+
+  // Check if user is trying to request their own ride
+  if (userId === ride.driverId) {
+    toast.error("You cannot request your own ride.");
+    return;
+  }
+
+  // Check if ride has available seats
+  if (ride.availableSeats <= 0) {
+    toast.error("Sorry, this ride has no available seats.");
+    return;
+  }
+
+  setRequesting(ride.$id);
+
+  try {
+    console.log("About to call RideRequestService.createRideRequest with:", {
+      rideId: ride.$id,
+      userId,
+      userName,
+      userPhone,
+      userEmail,
+      driverId: ride.driverId
+    });
+
+    // Use the RideRequestService to create the request
+    await RideRequestService.createRideRequest(
+      ride.$id,
+      userId,
+      userName,
+      finalPhone, // Use the phone we validated above
+      userEmail,
+      ride.driverId,
+      1, // Default to 1 seat requested
+      `Hi, I would like to join your ride from ${ride.from} to ${ride.to}. Thank you!`
+    );
+
+    console.log("Ride request created successfully!");
+    toast.success("Ride request sent successfully! The driver will be notified.");
     
-    try {
-      // Call the parent's onRequestRide function or implement your ride request logic
-      if (onRequestRide) {
-        onRequestRide(rideId);
-      } else {
-        // Default implementation - you can customize this
-        toast.success("Ride request sent! The driver will be notified.");
-      }
-    } catch (error) {
-      console.error("Error requesting ride:", error);
-      toast.error("Failed to request ride. Please try again.");
-    } finally {
-      setRequesting(null);
+    // Call the optional callback if provided
+    if (onRequestRide) {
+      onRequestRide(ride.$id);
     }
-  };
+
+    // Re-fetch rides to update the UI with any changes
+    await fetchAvailableRides();
+
+  } catch (error) {
+    console.error("Error requesting ride:", error);
+    
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      // Handle specific error messages
+      if (error.message.includes("already have a pending request")) {
+        toast.error("You already have a pending request for this ride.");
+      } else if (error.message.includes("Missing required fields")) {
+        toast.error("Please complete your profile (name, phone, email) to request rides.");
+      } else if (error.message.includes("cannot request your own ride")) {
+        toast.error("You cannot request your own ride.");
+      } else if (error.message.includes("Missing database configuration")) {
+        toast.error("Database configuration error. Please check your environment variables.");
+      } else {
+        toast.error(error.message);
+      }
+    } else {
+      toast.error("Failed to send ride request. Please try again.");
+    }
+  } finally {
+    setRequesting(null);
+  }
+};
 
   const formatTime = (time: string) => {
     try {
-      return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
+      if (!time) return "Not specified";
+      const timeStr = time.includes('T') ? time.split('T')[1] : time;
+      return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
@@ -144,6 +349,7 @@ export default function AvailableRidesSection({
 
   const formatDate = (date: string) => {
     try {
+      if (!date) return "Not specified";
       const rideDate = new Date(date);
       const today = new Date();
       const tomorrow = new Date(today);
@@ -154,10 +360,10 @@ export default function AvailableRidesSection({
       } else if (rideDate.toDateString() === tomorrow.toDateString()) {
         return 'Tomorrow';
       } else {
-        return rideDate.toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric' 
+        return rideDate.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
         });
       }
     } catch {
@@ -171,7 +377,7 @@ export default function AvailableRidesSection({
       const now = new Date();
       const diffMs = rideDateTime.getTime() - now.getTime();
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      
+
       if (diffHours < 1) {
         const diffMinutes = Math.floor(diffMs / (1000 * 60));
         return diffMinutes > 0 ? `${diffMinutes}m` : 'Soon';
@@ -209,7 +415,6 @@ export default function AvailableRidesSection({
 
   return (
     <div className="mt-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Car className="w-5 h-5 text-purple-600" />
@@ -220,7 +425,7 @@ export default function AvailableRidesSection({
             </span>
           )}
         </div>
-        
+
         <button
           onClick={fetchAvailableRides}
           disabled={refreshing}
@@ -231,7 +436,6 @@ export default function AvailableRidesSection({
         </button>
       </div>
 
-      {/* Filter Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1">
         {(['all', 'today', 'tomorrow'] as const).map((filterOption) => (
           <button
@@ -248,7 +452,6 @@ export default function AvailableRidesSection({
         ))}
       </div>
 
-      {/* Loading State */}
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -266,14 +469,13 @@ export default function AvailableRidesSection({
         </div>
       )}
 
-      {/* No Rides State */}
       {!loading && rides.length === 0 && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-8 text-center">
           <Car className="w-16 h-16 mx-auto mb-4 text-purple-300" />
           <p className="text-purple-700 font-medium mb-2">No rides available</p>
           <p className="text-sm text-purple-600 mb-4">
-            {filter === 'all' 
-              ? 'There are no available rides in your communities right now.'
+            {filter === 'all'
+              ? 'There are no available rides right now.'
               : `No rides available for ${filter}.`
             }
           </p>
@@ -286,7 +488,6 @@ export default function AvailableRidesSection({
         </div>
       )}
 
-      {/* Rides List */}
       {!loading && rides.length > 0 && (
         <div className="space-y-4">
           {rides.map((ride) => (
@@ -294,7 +495,6 @@ export default function AvailableRidesSection({
               key={ride.$id}
               className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200"
             >
-              {/* Driver Info & Time */}
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
@@ -318,7 +518,7 @@ export default function AvailableRidesSection({
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <div className="flex items-center gap-1 text-sm font-medium text-gray-800">
                     <Clock className="w-4 h-4" />
@@ -330,7 +530,6 @@ export default function AvailableRidesSection({
                 </div>
               </div>
 
-              {/* Route */}
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -345,35 +544,33 @@ export default function AvailableRidesSection({
                 <Navigation className="w-5 h-5 text-gray-400" />
               </div>
 
-              {/* Description */}
               {ride.description && (
                 <p className="text-sm text-gray-600 mb-3 bg-gray-50 p-2 rounded">
                   {ride.description}
                 </p>
               )}
 
-              {/* Bottom Info & Action */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
                     <span>{ride.availableSeats} seat{ride.availableSeats !== 1 ? 's' : ''}</span>
                   </div>
-                  
+
                   {ride.price && (
                     <div className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4" />
-                      <span>${ride.price}</span>
+                      <span>₦{ride.price}</span>
                     </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => handleRequestRide(ride.$id)}
-                  disabled={requesting === ride.$id}
+                  onClick={() => handleRequestRide(ride)}
+                  disabled={requesting === ride.$id || ride.availableSeats === 0}
                   className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {requesting === ride.$id ? "Requesting..." : "Request Ride"}
+                  {requesting === ride.$id ? "Requesting..." :
+                   ride.availableSeats === 0 ? "No Seats" : "Request Ride"}
                 </button>
               </div>
             </div>

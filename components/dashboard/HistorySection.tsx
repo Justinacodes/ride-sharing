@@ -20,6 +20,7 @@ interface HistoryDestinationProps {
   disabled?: boolean;
 }
 
+
 export default function HistoryDestination({ 
   destinations = [], 
   recentRides = [],
