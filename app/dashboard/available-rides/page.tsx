@@ -219,45 +219,46 @@ export default function AvailableRidesSection({
   }, [disabled, user?.$id, filter, DB_ID, RIDES_ID]);
 
 // Replace the problematic section around line 226 with this:
+// Existing imports and interfaces...
+
+// ... (previous code)
 
 const handleRequestRide = async (ride: Ride) => {
   console.log("handleRequestRide called for ride:", ride.$id);
-  console.log("User data:", user);
+  console.log("User data from store:", user);
 
-  // Check user data - using correct Appwrite User properties
+  // Get user details
   const userId = user?.$id;
   const userName = user?.name;
-  const userPhone = user?.phone;
   const userEmail = user?.email;
+  
+  // *** CRITICAL CHANGE HERE: Retrieve phone number more robustly ***
+  // Appwrite user object has a 'phone' attribute directly if set
+  // As a fallback, check user preferences if you've custom-stored it there.
+  const userPhone = user?.phone || user?.prefs?.phone || user?.prefs?.userPhone;
 
-  // Log the actual user object to debug
-  console.log("Full user object:", user);
-  console.log("User properties:", {
-    $id: user?.$id,
-    name: user?.name,
-    phone: user?.phone,
-    email: user?.email,
-    prefs: user?.prefs
+  // Log all essential user properties for debugging
+  console.log("Extracted User Properties for Request:", {
+    $id: userId,
+    name: userName,
+    email: userEmail,
+    phone: userPhone,
+    // Add more if needed, e.g., user?.prefs
   });
 
   if (!userId || !userName || !userEmail) {
-    console.error("Missing user data:", { 
+    console.error("Missing essential user data for request:", { 
       userId, 
       userName, 
-      userPhone, 
       userEmail 
     });
     toast.warning("Please log in and ensure your profile has a name and email to request a ride.");
     return;
   }
 
-  // Check if user phone is empty string or missing (which is your current issue)
-  // Phone might be stored in user preferences
-  const phoneFromPrefs = user?.prefs?.phone || user?.prefs?.userPhone;
-  const finalPhone = userPhone || phoneFromPrefs;
-  
-  if (!finalPhone || finalPhone.trim() === '') {
-    toast.warning("Please add your phone number to your profile to request rides.");
+  // Check if user phone is available and not an empty string
+  if (!userPhone || userPhone.trim() === '') {
+    toast.warning("Please add your phone number to your profile to request rides. You can update it in your profile settings.");
     return;
   }
 
@@ -280,7 +281,7 @@ const handleRequestRide = async (ride: Ride) => {
       rideId: ride.$id,
       userId,
       userName,
-      userPhone,
+      userPhone, // Pass the validated userPhone
       userEmail,
       driverId: ride.driverId
     });
@@ -290,7 +291,7 @@ const handleRequestRide = async (ride: Ride) => {
       ride.$id,
       userId,
       userName,
-      finalPhone, // Use the phone we validated above
+      userPhone, // Pass the phone number directly
       userEmail,
       ride.driverId,
       1, // Default to 1 seat requested
@@ -305,7 +306,7 @@ const handleRequestRide = async (ride: Ride) => {
       onRequestRide(ride.$id);
     }
 
-    // Re-fetch rides to update the UI with any changes
+    // Re-fetch rides to update the UI with any changes (e.g., available seats)
     await fetchAvailableRides();
 
   } catch (error) {
@@ -323,7 +324,7 @@ const handleRequestRide = async (ride: Ride) => {
       } else if (error.message.includes("Missing database configuration")) {
         toast.error("Database configuration error. Please check your environment variables.");
       } else {
-        toast.error(error.message);
+        toast.error(`Failed to send ride request: ${error.message}`);
       }
     } else {
       toast.error("Failed to send ride request. Please try again.");
@@ -332,6 +333,8 @@ const handleRequestRide = async (ride: Ride) => {
     setRequesting(null);
   }
 };
+
+// ... (rest of your component code)
 
   const formatTime = (time: string) => {
     try {

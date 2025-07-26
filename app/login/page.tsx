@@ -3,9 +3,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, Car, Facebook } from "lucide-react";
-import { account } from "../appwrite";
 import { useUserStore } from "@/stores/userStore";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,7 +18,7 @@ type FormData = z.infer<typeof schema>;
 
 const LoginPage = () => {
   const router = useRouter();
-  const { user, setUser, clearUser } = useUserStore();
+  const { user, setUser } = useUserStore();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -27,31 +26,48 @@ const LoginPage = () => {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
-  const email = watch("email");
-  const password = watch("password");
-
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
+      // First, validate with API route
+      const validationResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const validationData = await validationResponse.json();
+
+      if (!validationResponse.ok) {
+        throw new Error(validationData.error || 'Validation failed');
+      }
+
+      // If validation passes, proceed with client-side authentication
+      const { account } = await import("@/app/appwrite"); // Adjust path as needed
+      
+      // Delete existing session
       try {
         await account.deleteSession('current');
       } catch (e) {
         console.log("No existing session to delete");
       }
   
+      // Create session on client-side
       await account.createEmailPasswordSession(email, password);
       const user = await account.get();
+      
       setUser(user);
-      toast.success("Successfully Logged in!")
+      toast.success("Successfully logged in!");
       router.push("/dashboard");
-    } catch (err) {
-      toast.error("Login failed. Please check your credentials.");
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.message || "Login failed. Please check your credentials.");
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -66,13 +82,24 @@ const LoginPage = () => {
   };
 
   const navigateToRegister = () => {
-    router.push("/register")
+    router.push("/register");
   };
 
+  // Handle redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
+
+  // Show loading or nothing while redirecting
   if (user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-        {/* User is logged in - could redirect or show dashboard */}
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Redirecting to dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -201,7 +228,7 @@ const LoginPage = () => {
         {/* Registration Link */}
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm">
-        Dont have an account?{" "}
+            Don&apos;t have an account?{" "}
             <button
               onClick={navigateToRegister}
               className="text-purple-600 hover:text-purple-700 font-semibold transition-colors hover:underline"
